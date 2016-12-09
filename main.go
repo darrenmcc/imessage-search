@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"os/user"
-
 	"strings"
 
 	"github.com/fatih/color"
