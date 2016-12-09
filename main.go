@@ -23,7 +23,7 @@ var (
 	dbLocation = flag.String("db", "", "the location of your chat.db file, if other than ~/Library/Messages/chat.db")
 
 	fileDump         = flag.Bool("file-dump", false, "dump all shared files")
-	fileDumpLocation = flag.String("dump-dir", ".", "the location to dump files")
+	fileDumpLocation = flag.String("dir", ".", "the location to dump files")
 
 	fromMap = map[int]string{
 		0: color.RedString("Them"),
@@ -51,7 +51,6 @@ func main() {
 
 	var dbLoc string
 	if *dbLocation == "" {
-
 		dbLoc = usr.HomeDir + defaultDBLocation
 	}
 
@@ -62,10 +61,15 @@ func main() {
 	defer db.Close()
 
 	if *fileDump {
-		dumpFiles(db, usr.HomeDir)
+		getFiles(db, usr.HomeDir)
 		return
 	}
 
+	getMessages(db)
+
+}
+
+func getMessages(db *sql.DB) {
 	query := fmt.Sprintf(`
         SELECT  
             is_from_me, 
@@ -97,13 +101,11 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		fmt.Printf("%s...%s:\t%s\n", date, fromMap[isMe], msg)
 	}
-
 }
 
-func dumpFiles(db *sql.DB, homeDir string) {
+func getFiles(db *sql.DB, homeDir string) {
 	query := fmt.Sprintf(`
         SELECT  filename 
         FROM    attachment 
@@ -138,10 +140,12 @@ func dumpFiles(db *sql.DB, homeDir string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		path := strings.Replace(file, "~", homeDir, 1)
-		_, err := copyFile(path, *fileDumpLocation)
+		src := strings.Replace(file, "~", homeDir, 1)
+		tokens := strings.Split(src, "/")
+		dst := *fileDumpLocation + "/" + tokens[len(tokens)-1]
+		_, err := copyFile(src, dst)
 		if err != nil {
-			log.Print("could not copy file: " + path)
+			log.Print("could not copy file: " + err.Error())
 		}
 	}
 }
